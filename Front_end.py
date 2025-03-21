@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pickle
 import os
 from back_end import load_and_explore_data, preprocess_data, train_and_evaluate_models, \
@@ -194,22 +193,22 @@ if st.button("Start Prediction", key="predict_button"):
             })
 
             fig2, ax2 = plt.subplots(figsize=(10, 8))
-            ax2.axis('off')  # 关闭坐标轴
+            ax2.axis('off')
 
-            # 创建表格
+            # Create a table
             table = ax2.table(cellText=data.values, colLabels=data.columns, cellLoc='center', loc='center')
             table.auto_set_font_size(False)
             table.set_fontsize(12)
-            table.scale(1, 3)  # 调整表格大小
+            table.scale(1, 3)  # Adjust the table size
 
-            # 设置表头背景颜色和字体加粗
+            # Set the background color and bold font for the table header
             for (row, col), cell in table.get_celld().items():
                 if row == 0:
                     cell.set_facecolor('#40466e')
                     cell.get_text().set_fontweight('bold')
                     cell.get_text().set_color('white')
 
-            # 设置表格内容背景颜色和字体加粗
+            # Set the background color and bold font for the table content
             for (row, col), cell in table.get_celld().items():
                 if row > 0:
                     if row % 2 == 0:
@@ -218,7 +217,7 @@ if st.button("Start Prediction", key="predict_button"):
                         cell.set_facecolor('#ffffff')
                     cell.get_text().set_fontweight('bold')
 
-            # 调整单元格边框样式
+            # Adjust the border style of the cells
             for key, cell in table.get_celld().items():
                 cell.set_edgecolor('lightgray')
 
