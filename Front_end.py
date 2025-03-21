@@ -8,19 +8,19 @@ import os
 from back_end import load_and_explore_data, preprocess_data, train_and_evaluate_models, \
     create_and_evaluate_voting_clf
 
-# 设置matplotlib中文字体
-plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
-plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+# Set matplotlib font for English
+plt.rcParams['font.sans-serif'] = ['Arial']  # For English labels
+plt.rcParams['axes.unicode_minus'] = False  # For negative signs
 
-# 确保这是第一个Streamlit命令
+# Ensure this is the first Streamlit command
 st.set_page_config(
-    page_title="糖尿病早期检测系统",
+    page_title="Diabetes Early Detection System",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 自定义CSS样式
+# Custom CSS styles
 st.markdown("""
     <style>
     .main {
@@ -44,67 +44,67 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 主标题
-st.title("🏥 糖尿病早期检测系统")
+# Main title
+st.title("🏥 Diabetes Early Detection System")
 st.markdown("""
     <div style='background-color: #e6f3ff; padding: 1rem; border-radius: 5px;'>
-        <h3>欢迎使用糖尿病早期检测系统</h3>
-        <p>本系统基于机器学习模型，通过分析患者的各项指标来预测糖尿病风险。</p>
+        <h3>Welcome to Diabetes Early Detection System</h3>
+        <p>This system uses machine learning models to predict diabetes risk by analyzing various patient indicators.</p>
     </div>
     """, unsafe_allow_html=True)
 
-# 加载并显示模型准确度
+# Load and display model accuracy
 try:
-    # 检查模型文件是否存在
+    # Check if model files exist
     if not (os.path.exists('voting_clf.pkl') and os.path.exists('preprocessor.pkl')):
-        st.info("模型文件不存在，正在进行模型训练...")
-        # 加载数据并训练模型
+        st.info("Model files not found, starting model training...")
+        # Load data and train model
         data = load_and_explore_data('Dataset of Diabetes .csv')
         if data is not None:
             X_train, X_test, y_train, y_test = preprocess_data(data)
             if X_train is not None:
-                # 训练并保存模型
+                # Train and save model
                 results_df = train_and_evaluate_models(X_train, X_test, y_train, y_test)
                 if results_df is not None:
                     voting_results = create_and_evaluate_voting_clf(X_train, X_test, y_train, y_test)
                     if voting_results is not None:
-                        st.success("模型训练完成！")
+                        st.success("Model training completed!")
                     else:
-                        st.error("模型训练失败，请检查数据或重试。")
+                        st.error("Model training failed. Please check data or try again.")
                         st.stop()
                 else:
-                    st.error("模型训练失败，请检查数据或重试。")
+                    st.error("Model training failed. Please check data or try again.")
                     st.stop()
             else:
-                st.error("数据预处理失败，请检查数据或重试。")
+                st.error("Data preprocessing failed. Please check data or try again.")
                 st.stop()
         else:
-            st.error("数据加载失败，请确保数据文件存在。")
+            st.error("Data loading failed. Please ensure data file exists.")
             st.stop()
 
-    # 加载训练好的模型
+    # Load trained model
     with open('voting_clf.pkl', 'rb') as f:
         model = pickle.load(f)
     with open('preprocessor.pkl', 'rb') as f:
         preprocessor = pickle.load(f)
 
-    # 加载数据并计算模型准确度
+    # Load data and calculate model accuracy
     data = load_and_explore_data('Dataset of Diabetes .csv')
     if data is not None:
         X_train, X_test, y_train, y_test = preprocess_data(data)
         if X_train is not None:
             results_df = train_and_evaluate_models(X_train, X_test, y_train, y_test)
             if results_df is not None:
-                # 获取集成模型结果
+                # Get ensemble model results
                 voting_results = create_and_evaluate_voting_clf(X_train, X_test, y_train, y_test)
                 if voting_results is not None:
-                    # 将集成模型结果添加到results_df
+                    # Add ensemble model results to results_df
                     results_df.loc['Ensemble Model'] = voting_results
 
-                st.header("📊 模型性能评估")
+                st.header("📊 Model Performance Evaluation")
 
-                # 显示所有模型的准确度
-                st.subheader("各模型评估指标")
+                # Display accuracy of all models
+                st.subheader("Model Evaluation Metrics")
                 st.dataframe(results_df.style.format({
                     'Accuracy': '{:.2%}',
                     'Precision': '{:.2%}',
@@ -113,115 +113,115 @@ try:
                     'AUC-ROC': '{:.2%}'
                 }))
 
-                # 单独展示集成模型的准确度
-                st.subheader("集成模型性能")
+                # Display ensemble model accuracy separately
+                st.subheader("Ensemble Model Performance")
                 ensemble_metrics = pd.DataFrame({
-                    '准确率': [voting_results['Accuracy']],
-                    '精确率': [voting_results['Precision']],
-                    '召回率': [voting_results['Recall']],
-                    'F1分数': [voting_results['F1-Score']],
+                    'Accuracy': [voting_results['Accuracy']],
+                    'Precision': [voting_results['Precision']],
+                    'Recall': [voting_results['Recall']],
+                    'F1-Score': [voting_results['F1-Score']],
                     'AUC-ROC': [voting_results['AUC-ROC']]
-                }, index=['集成模型'])
+                }, index=['Ensemble Model'])
 
                 st.dataframe(ensemble_metrics.style.format('{:.2%}'))
 
-                # 可视化模型性能
+                # Visualize model performance
                 fig, ax = plt.subplots(figsize=(10, 6))
                 results_df['Accuracy'].plot(kind='bar', ax=ax)
-                plt.title('各模型准确率对比', fontsize=12)
-                plt.xlabel('模型', fontsize=10)
-                plt.ylabel('准确率', fontsize=10)
+                plt.title('Model Accuracy Comparison', fontsize=12)
+                plt.xlabel('Model', fontsize=10)
+                plt.ylabel('Accuracy', fontsize=10)
                 plt.xticks(rotation=45)
                 plt.tight_layout()
                 st.pyplot(fig)
 except Exception as e:
-    st.error(f"模型加载或训练过程中发生错误: {str(e)}")
+    st.error(f"Error in model loading or training process: {str(e)}")
     st.stop()
 
-# 主界面
-st.header("👤 患者信息输入")
+# Main interface
+st.header("👤 Patient Information Input")
 col1, col2 = st.columns(2)
 
 with col1:
-    gender = st.selectbox("性别", ['F', 'M'])
-    age = st.number_input("年龄", min_value=0, max_value=100, value=30)
-    urea = st.number_input("尿素 (mmol/L)", min_value=0.0, max_value=100.0, value=5.0)
-    cr = st.number_input("肌酐 (μmol/L)", min_value=0, max_value=1000, value=50)
-    hba1c = st.number_input("糖化血红蛋白 (%)", min_value=0.0, max_value=20.0, value=5.0)
-    chol = st.number_input("总胆固醇 (mmol/L)", min_value=0.0, max_value=10.0, value=5.0)
+    gender = st.selectbox("Gender", ['F', 'M'])
+    age = st.number_input("Age", min_value=0, max_value=100, value=30)
+    urea = st.number_input("Urea (mmol/L)", min_value=0.0, max_value=100.0, value=5.0)
+    cr = st.number_input("Creatinine (μmol/L)", min_value=0, max_value=1000, value=50)
+    hba1c = st.number_input("HbA1c (%)", min_value=0.0, max_value=20.0, value=5.0)
+    chol = st.number_input("Total Cholesterol (mmol/L)", min_value=0.0, max_value=10.0, value=5.0)
 
 with col2:
-    tg = st.number_input("甘油三酯 (mmol/L)", min_value=0.0, max_value=10.0, value=1.0)
-    hdl = st.number_input("高密度脂蛋白胆固醇 (mmol/L)", min_value=0.0, max_value=5.0, value=1.0)
-    ldl = st.number_input("低密度脂蛋白胆固醇 (mmol/L)", min_value=0.0, max_value=10.0, value=2.0)
-    vldl = st.number_input("极低密度脂蛋白胆固醇 (mmol/L)", min_value=0.0, max_value=10.0, value=1.0)
-    bmi = st.number_input("身体质量指数 (kg/m²)", min_value=0.0, max_value=60.0, value=25.0)
+    tg = st.number_input("Triglycerides (mmol/L)", min_value=0.0, max_value=10.0, value=1.0)
+    hdl = st.number_input("HDL Cholesterol (mmol/L)", min_value=0.0, max_value=5.0, value=1.0)
+    ldl = st.number_input("LDL Cholesterol (mmol/L)", min_value=0.0, max_value=10.0, value=2.0)
+    vldl = st.number_input("VLDL Cholesterol (mmol/L)", min_value=0.0, max_value=10.0, value=1.0)
+    bmi = st.number_input("Body Mass Index (kg/m²)", min_value=0.0, max_value=60.0, value=25.0)
 
-# 预测按钮
+# Prediction button
 st.markdown("""
     <div style='background-color: #f0f2f6; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;'>
-        <h4>⚠️ 注意：当前使用集成模型进行预测</h4>
-        <p>集成模型综合了逻辑回归、随机森林和梯度提升三个模型的优点，通常能提供更稳定和准确的预测结果。</p>
+        <h4>⚠️ Note: Currently using ensemble model for prediction</h4>
+        <p>The ensemble model combines the advantages of logistic regression, random forest, and gradient boosting models to provide more stable and accurate predictions.</p>
     </div>
     """, unsafe_allow_html=True)
 
-if st.button("开始预测", key="predict_button"):
+if st.button("Start Prediction", key="predict_button"):
     try:
-        # 准备输入数据
+        # Prepare input data
         gender_mapping = {'F': 0, 'M': 1}
         gender_encoded = gender_mapping[gender]
         input_data = np.array([[gender_encoded, age, urea, cr, hba1c, chol, tg, hdl, ldl, vldl, bmi]])
 
-        # 数据预处理和预测
+        # Data preprocessing and prediction
         input_data = preprocessor.transform(input_data)
         prediction = model.predict(input_data)[0]
         probability = model.predict_proba(input_data)[0][1]
 
-        # 显示预测结果
-        st.header("📈 预测结果 (集成模型)")
+        # Display prediction results
+        st.header("📈 Prediction Results (Ensemble Model)")
         if prediction == 1:
-            st.error(f"⚠️ 该患者存在糖尿病风险 (概率: {probability:.2%})")
+            st.error(f"⚠️ Patient is at risk of diabetes (Probability: {probability:.2%})")
         else:
-            st.success(f"✅ 该患者目前没有糖尿病风险 (概率: {probability:.2%})")
+            st.success(f"✅ Patient is not at risk of diabetes (Probability: {probability:.2%})")
 
-        # 可视化结果
+        # Visualize results
         col1, col2 = st.columns(2)
 
         with col1:
             fig1, ax1 = plt.subplots()
-            ax1.bar(["无风险", "有风险"], [1 - probability, probability],
+            ax1.bar(["No Risk", "At Risk"], [1 - probability, probability],
                     color=["#4CAF50", "#f44336"])
             ax1.set_ylim(0, 1)
-            ax1.set_ylabel("概率", fontsize=10)
-            ax1.set_title("糖尿病风险预测概率", fontsize=12)
+            ax1.set_ylabel("Probability", fontsize=10)
+            ax1.set_title("Diabetes Risk Prediction Probability", fontsize=12)
             st.pyplot(fig1)
 
         with col2:
-            # 创建患者数据可视化
+            # Create patient data visualization
             data = pd.DataFrame({
-                "指标": ["性别", "年龄", "尿素", "肌酐", "糖化血红蛋白", "总胆固醇",
-                         "甘油三酯", "HDL", "LDL", "VLDL", "BMI"],
-                "数值": [gender, str(age), str(urea), str(cr), str(hba1c), str(chol),
+                "Indicator": ["Gender", "Age", "Urea", "Creatinine", "HbA1c", "Total Cholesterol",
+                             "Triglycerides", "HDL", "LDL", "VLDL", "BMI"],
+                "Value": [gender, str(age), str(urea), str(cr), str(hba1c), str(chol),
                          str(tg), str(hdl), str(ldl), str(vldl), str(bmi)]
             })
 
             fig2, ax2 = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=data, x="指标", y="数值", ax=ax2)
+            sns.barplot(data=data, x="Indicator", y="Value", ax=ax2)
             plt.xticks(rotation=45, fontsize=10)
             plt.yticks(fontsize=10)
-            ax2.set_title("患者指标分布", fontsize=12)
-            ax2.set_xlabel("数值", fontsize=10)
-            ax2.set_ylabel("指标", fontsize=10)
+            ax2.set_title("Patient Indicators Distribution", fontsize=12)
+            ax2.set_xlabel("Value", fontsize=10)
+            ax2.set_ylabel("Indicator", fontsize=10)
             plt.tight_layout()
             st.pyplot(fig2)
 
     except Exception as e:
-        st.error(f"预测过程中发生错误: {str(e)}")
+        st.error(f"Error during prediction: {str(e)}")
 
-# 页脚
+# Footer
 st.markdown("---")
 st.markdown("""
     <div style='text-align: center; color: #666;'>
-        <p>© 2024 糖尿病早期检测系统 | 技术支持</p>
+        <p>© 2024 Diabetes Early Detection System | Technical Support</p>
     </div>
     """, unsafe_allow_html=True)
