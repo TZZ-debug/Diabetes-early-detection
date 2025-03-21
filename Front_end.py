@@ -113,18 +113,6 @@ try:
                     'AUC-ROC': '{:.2%}'
                 }))
 
-                # Display ensemble model accuracy separately
-                st.subheader("Ensemble Model Performance")
-                ensemble_metrics = pd.DataFrame({
-                    'Accuracy': [voting_results['Accuracy']],
-                    'Precision': [voting_results['Precision']],
-                    'Recall': [voting_results['Recall']],
-                    'F1-Score': [voting_results['F1-Score']],
-                    'AUC-ROC': [voting_results['AUC-ROC']]
-                }, index=['Ensemble Model'])
-
-                st.dataframe(ensemble_metrics.style.format('{:.2%}'))
-
                 # Visualize model performance
                 fig, ax = plt.subplots(figsize=(10, 6))
                 results_df['Accuracy'].plot(kind='bar', ax=ax)
@@ -205,13 +193,36 @@ if st.button("Start Prediction", key="predict_button"):
                          str(tg), str(hdl), str(ldl), str(vldl), str(bmi)]
             })
 
-            fig2, ax2 = plt.subplots(figsize=(10, 6))
-            sns.barplot(data=data, x="Indicator", y="Value", ax=ax2)
-            plt.xticks(rotation=45, fontsize=10)
-            plt.yticks(fontsize=10)
-            ax2.set_title("Patient Indicators Distribution", fontsize=12)
-            ax2.set_xlabel("Value", fontsize=10)
-            ax2.set_ylabel("Indicator", fontsize=10)
+            fig2, ax2 = plt.subplots(figsize=(10, 8))
+            ax2.axis('off')  # 关闭坐标轴
+
+            # 创建表格
+            table = ax2.table(cellText=data.values, colLabels=data.columns, cellLoc='center', loc='center')
+            table.auto_set_font_size(False)
+            table.set_fontsize(12)
+            table.scale(1, 3)  # 调整表格大小
+
+            # 设置表头背景颜色和字体加粗
+            for (row, col), cell in table.get_celld().items():
+                if row == 0:
+                    cell.set_facecolor('#40466e')
+                    cell.get_text().set_fontweight('bold')
+                    cell.get_text().set_color('white')
+
+            # 设置表格内容背景颜色和字体加粗
+            for (row, col), cell in table.get_celld().items():
+                if row > 0:
+                    if row % 2 == 0:
+                        cell.set_facecolor('#f2f2f2')
+                    else:
+                        cell.set_facecolor('#ffffff')
+                    cell.get_text().set_fontweight('bold')
+
+            # 调整单元格边框样式
+            for key, cell in table.get_celld().items():
+                cell.set_edgecolor('lightgray')
+
+            plt.title("Patient Indicators Distribution", fontsize=15)
             plt.tight_layout()
             st.pyplot(fig2)
 
