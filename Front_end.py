@@ -4,13 +4,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import os
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
 from back_end import load_and_explore_data, preprocess_data, train_and_evaluate_models, \
-    create_and_evaluate_voting_clf
+    create_and_evaluate_voting_clf, visualize_key_features
 from fpdf import FPDF
 
+st.set_option('deprecation.showPyplotGlobalUse', False)
+
 # Set matplotlib font for English
-plt.rcParams['font.sans-serif'] = ['Arial']  # For English labels
-plt.rcParams['axes.unicode_minus'] = False  # For negative signs
+plt.rcParams['font.sans-serif'] = ['Arial']
+plt.rcParams['axes.unicode_minus'] = False
 
 # Ensure this is the first Streamlit command
 st.set_page_config(
@@ -23,10 +27,10 @@ st.set_page_config(
 # Custom CSS styles
 st.markdown("""
     <style>
-    .main {
+   .main {
         padding: 2rem;
     }
-    .stButton>button, .stDownloadButton>button {
+   .stButton>button,.stDownloadButton>button {
         width: 50%;
         margin: 1rem auto;
         background-color: #4CAF50;
@@ -40,18 +44,18 @@ st.markdown("""
         transition: all 0.3s ease;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
-    .stButton>button:hover, .stDownloadButton>button:hover {
+   .stButton>button:hover,.stDownloadButton>button:hover {
         background-color: #45a049;
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
-    .stButton>button:active, .stDownloadButton>button:active {
+   .stButton>button:active,.stDownloadButton>button:active {
         transform: translateY(0);
     }
-    .sidebar .sidebar-content {
+   .sidebar.sidebar-content {
         background-color: #f0f2f6;
     }
-    .button-container {
+   .button-container {
         display: flex;
         justify-content: center;
         align-items: center;
@@ -72,6 +76,7 @@ st.markdown("""
 
 # Load and display model accuracy
 try:
+    results_df = None
     # Check if model files exist
     if not (os.path.exists('voting_clf.pkl') and os.path.exists('preprocessor.pkl')):
         st.info("Model files not found, starting model training...")
@@ -86,62 +91,80 @@ try:
                     voting_results = create_and_evaluate_voting_clf(X_train, X_test, y_train, y_test)
                     if voting_results is not None:
                         st.success("Model training completed!")
+                        # New: Call the visualization function and update the results dataframe
+                        models = {
+                            "Logistic Regression": LogisticRegression(),
+                            "Random Forest": RandomForestClassifier(random_state=42),
+                            "Gradient Boosting": GradientBoostingClassifier(random_state=42)
+                        }
+                        results_df = visualize_key_features(models, X_train, y_train, results_df)
                     else:
                         st.error("Model training failed. Please check data or try again.")
-                        st.stop()
                 else:
                     st.error("Model training failed. Please check data or try again.")
-                    st.stop()
             else:
                 st.error("Data preprocessing failed. Please check data or try again.")
-                st.stop()
         else:
             st.error("Data loading failed. Please ensure data file exists.")
-            st.stop()
+    else:
+        # Load trained model
+        with open('voting_clf.pkl', 'rb') as f:
+            model = pickle.load(f)
+        with open('preprocessor.pkl', 'rb') as f:
+            preprocessor = pickle.load(f)
 
-    # Load trained model
-    with open('voting_clf.pkl', 'rb') as f:
-        model = pickle.load(f)
-    with open('preprocessor.pkl', 'rb') as f:
-        preprocessor = pickle.load(f)
-
-    # Load data and calculate model accuracy
-    data = load_and_explore_data('Dataset of Diabetes .csv')
-    if data is not None:
-        X_train, X_test, y_train, y_test = preprocess_data(data)
-        if X_train is not None:
-            results_df = train_and_evaluate_models(X_train, X_test, y_train, y_test)
-            if results_df is not None:
-                # Get ensemble model results
+        # Load data and calculate model accuracy
+        data = load_and_explore_data('Dataset of Diabetes .csv')
+        if data is not None:
+            X_train, X_test, y_train, y_test = preprocess_data(data)
+            if X_train is not None:
+                results_df = train_and_evaluate_models(X_train, X_test, y_train, y_test)
+                # Call the create_and_evaluate_voting_clf function again to get voting_results
                 voting_results = create_and_evaluate_voting_clf(X_train, X_test, y_train, y_test)
                 if voting_results is not None:
-                    # Add ensemble model results to results_df
-                    results_df.loc['Ensemble Model'] = voting_results
+                    st.success("Model training completed!")
+                    # Call the visualization function and update the results dataframe
+                    models = {
+                        "Logistic Regression": LogisticRegression(),
+                        "Random Forest": RandomForestClassifier(random_state=42),
+                        "Gradient Boosting": GradientBoostingClassifier(random_state=42)
+                    }
+                    results_df = visualize_key_features(models, X_train, y_train, results_df)
+                else:
+                    st.error("Model training failed. Please check data or try again.")
+            else:
+                st.error("Data preprocessing failed. Please check data or try again.")
+        else:
+            st.error("Data loading failed. Please ensure data file exists.")
 
-                st.header("📊 Model Performance Evaluation")
+    if results_df is not None:
+        st.header("📊 Model Performance Evaluation")
 
-                # Display accuracy of all models
-                st.subheader("Model Evaluation Metrics")
-                st.dataframe(results_df.style.format({
-                    'Accuracy': '{:.2%}',
-                    'Precision': '{:.2%}',
-                    'Recall': '{:.2%}',
-                    'F1-Score': '{:.2%}',
-                    'AUC-ROC': '{:.2%}'
-                }))
+        # Display accuracy of all models
+        st.subheader("Model Evaluation Metrics")
+        st.dataframe(results_df.style.format({
+            'Accuracy': '{:.2%}',
+            'Precision': '{:.2%}',
+            'Recall': '{:.2%}',
+            'F1-Score': '{:.2%}',
+            'AUC-ROC': '{:.2%}',
+            'Key Features': lambda x: x,
+            'Feature Importance Scores': lambda x: x,
+            'Specificity': '{:.2%}'
+        }))
 
-                # Visualize model performance
-                fig, ax = plt.subplots(figsize=(10, 6))
-                results_df['Accuracy'].plot(kind='bar', ax=ax)
-                plt.title('Model Accuracy Comparison', fontsize=12)
-                plt.xlabel('Model', fontsize=10)
-                plt.ylabel('Accuracy', fontsize=10)
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                st.pyplot(fig)
+        # Visualize model performance
+        fig, ax = plt.subplots(figsize=(10, 6))
+        results_df['Accuracy'].plot(kind='bar', ax=ax)
+        plt.title('Model Accuracy Comparison', fontsize=12)
+        plt.xlabel('Model', fontsize=10)
+        plt.ylabel('Accuracy', fontsize=10)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        st.pyplot(fig)
+
 except Exception as e:
     st.error(f"Error in model loading or training process: {str(e)}")
-    st.stop()
 
 # Main interface
 st.header("👤 Patient Information Input")
@@ -191,9 +214,9 @@ if st.button("🔍 Start Prediction", key="predict_button"):
         if prediction == 2:
             st.error(f"⚠️ Patient is Diabetic (Probability: {model.predict_proba(input_data)[0][2]:.2%})")
         if prediction == 0:
-            st.success(f"✅ Patient is  Non-Diabetic (Probability: {model.predict_proba(input_data)[0][0]:.2%})")
+            st.success(f"✅ Patient is Non - Diabetic (Probability: {model.predict_proba(input_data)[0][0]:.2%})")
         if prediction == 1:
-            st.success(f"✅ Patient is Predict-Diabetic (Probability: {model.predict_proba(input_data)[0][1]:.2%})")
+            st.success(f"✅ Patient is Predict - Diabetic (Probability: {model.predict_proba(input_data)[0][1]:.2%})")
 
         # Create a container for the download button
         st.markdown('<div class="button-container">', unsafe_allow_html=True)
@@ -201,31 +224,35 @@ if st.button("🔍 Start Prediction", key="predict_button"):
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", size=12)
-            
+
             # Title
             pdf.cell(200, 10, txt="Diabetes Prediction Report", ln=True, align="C")
-            
+
             # Prediction results
-            pdf.cell(200, 10, txt=f"Prediction: {'Diabetic' if prediction == 2 else 'Predict - Diabetic' if prediction == 1 else 'Non - Diabetic'}", ln=True)
-            pdf.cell(200, 10, txt=f"Probability: {probability0 if prediction == 0 else probability1 if prediction == 1 else probability2:.2%}", ln=True)
-            
+            pdf.cell(200, 10,
+                     txt=f"Prediction: {'Diabetic' if prediction == 2 else 'Predict - Diabetic' if prediction == 1 else 'Non - Diabetic'}",
+                     ln=True)
+            pdf.cell(200, 10,
+                     txt=f"Probability: {probability0 if prediction == 0 else probability1 if prediction == 1 else probability2:.2%}",
+                     ln=True)
+
             # Add patient information
             pdf.ln(10)
             pdf.cell(200, 10, txt="Patient Information:", ln=True)
             pdf.cell(200, 10, txt=f"Gender: {gender}", ln=True)
             pdf.cell(200, 10, txt=f"Age: {age}", ln=True)
             pdf.cell(200, 10, txt=f"Urea: {urea} mmol/L", ln=True)
-            pdf.cell(200, 10, txt=f"Creatinine: {cr} umol/L", ln=True)  # Changed μ to u
+            pdf.cell(200, 10, txt=f"Creatinine: {cr} umol/L", ln=True)
             pdf.cell(200, 10, txt=f"HbA1c: {hba1c}%", ln=True)
             pdf.cell(200, 10, txt=f"Total Cholesterol: {chol} mmol/L", ln=True)
             pdf.cell(200, 10, txt=f"Triglycerides: {tg} mmol/L", ln=True)
             pdf.cell(200, 10, txt=f"HDL Cholesterol: {hdl} mmol/L", ln=True)
             pdf.cell(200, 10, txt=f"LDL Cholesterol: {ldl} mmol/L", ln=True)
             pdf.cell(200, 10, txt=f"VLDL Cholesterol: {vldl} mmol/L", ln=True)
-            pdf.cell(200, 10, txt=f"BMI: {bmi} kg/m2", ln=True)  # Changed ² to 2
+            pdf.cell(200, 10, txt=f"BMI: {bmi} kg/m²", ln=True)
 
             pdf_output = pdf.output(dest="S").encode("latin-1")
-            
+
             # Use st.download_button instead of st.button
             st.download_button(
                 label="📥 Download Report as PDF",
@@ -243,8 +270,8 @@ if st.button("🔍 Start Prediction", key="predict_button"):
 
         with col1:
             fig1, ax1 = plt.subplots()
-            ax1.bar(["Non-Diabetic", "Predict-Diabetic", "Diabetic"], [probability0, probability1,probability2],
-                    color=["#4CAF50","#FFEB3B", "#f44336"])
+            ax1.bar(["Non - Diabetic", "Predict - Diabetic", "Diabetic"], [probability0, probability1, probability2],
+                    color=["#4CAF50", "#FFEB3B", "#f44336"])
             ax1.set_ylim(0, 1)
             ax1.set_ylabel("Probability", fontsize=10)
             ax1.set_title("Diabetes Risk Prediction Probability", fontsize=12)
@@ -254,9 +281,9 @@ if st.button("🔍 Start Prediction", key="predict_button"):
             # Create patient data visualization
             data = pd.DataFrame({
                 "Indicator": ["Gender", "Age", "Urea", "Creatinine", "HbA1c", "Total Cholesterol",
-                             "Triglycerides", "HDL", "LDL", "VLDL", "BMI"],
+                              "Triglycerides", "HDL", "LDL", "VLDL", "BMI"],
                 "Value": [gender, str(age), str(urea), str(cr), str(hba1c), str(chol),
-                         str(tg), str(hdl), str(ldl), str(vldl), str(bmi)]
+                          str(tg), str(hdl), str(ldl), str(vldl), str(bmi)]
             })
 
             fig2, ax2 = plt.subplots(figsize=(10, 8))
@@ -266,7 +293,7 @@ if st.button("🔍 Start Prediction", key="predict_button"):
             table = ax2.table(cellText=data.values, colLabels=data.columns, cellLoc='center', loc='center')
             table.auto_set_font_size(False)
             table.set_fontsize(12)
-            table.scale(1, 3)  # Adjust the table size
+            table.scale(1, 3)
 
             # Set the background color and bold font for the table header
             for (row, col), cell in table.get_celld().items():
@@ -302,7 +329,7 @@ st.header("💬 Support & Feedback")
 st.markdown("""
     <div style='background-color: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;'>
         <h4>Help & Support</h4>
-        <p>For help, please refer to the <a href="#">User Guide</a> or contact support@example.com.</p>
+        <p>For help, please refer to the <a href="#">User Guide</a>.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -318,7 +345,7 @@ st.markdown('<div class="button-container">', unsafe_allow_html=True)
 if st.button("📤 Submit Feedback", key="feedback_button"):
     try:
         with open("feedback.txt", "a", encoding='utf-8') as f:
-            f.write(f"{feedback}\n{'='*50}\n")  # Add a separator between feedback entries
+            f.write(f"{feedback}\n{'=' * 50}\n")  # Add a separator between feedback entries
         st.success("✅ Thank you for your feedback!")
         st.experimental_rerun()  # Clear the form after submission
     except Exception as e:
@@ -330,6 +357,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("""
     <div style='text-align: center; color: #666;'>
-        <p>© 2024 Diabetes Early Detection System | Technical Support</p>
+        <p>© 2025 Diabetes Early Detection System | Technical Support</p>
     </div>
     """, unsafe_allow_html=True)
