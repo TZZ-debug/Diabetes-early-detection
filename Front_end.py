@@ -6,6 +6,7 @@ import pickle
 import os
 from back_end import load_and_explore_data, preprocess_data, train_and_evaluate_models, \
     create_and_evaluate_voting_clf
+from fpdf import FPDF
 
 # Set matplotlib font for English
 plt.rcParams['font.sans-serif'] = ['Arial']  # For English labels
@@ -25,20 +26,37 @@ st.markdown("""
     .main {
         padding: 2rem;
     }
-    .stButton>button {
-        width: 100%;
-        margin-top: 1rem;
+    .stButton>button, .stDownloadButton>button {
+        width: 50%;
+        margin: 1rem auto;
         background-color: #4CAF50;
         color: white;
         border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 5px;
+        padding: 0.8rem 1.5rem;
+        border-radius: 25px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        display: block;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
-    .stButton>button:hover {
+    .stButton>button:hover, .stDownloadButton>button:hover {
         background-color: #45a049;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .stButton>button:active, .stDownloadButton>button:active {
+        transform: translateY(0);
     }
     .sidebar .sidebar-content {
         background-color: #f0f2f6;
+    }
+    .button-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin: 1rem 0;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -152,7 +170,9 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-if st.button("Start Prediction", key="predict_button"):
+# Create a container for the prediction button
+st.markdown('<div class="button-container">', unsafe_allow_html=True)
+if st.button("🔍 Start Prediction", key="predict_button"):
     try:
         # Prepare input data
         gender_mapping = {'F': 0, 'M': 1}
@@ -162,22 +182,69 @@ if st.button("Start Prediction", key="predict_button"):
         # Data preprocessing and prediction
         input_data = preprocessor.transform(input_data)
         prediction = model.predict(input_data)[0]
-        probability = model.predict_proba(input_data)[0][1]
+        probability0 = model.predict_proba(input_data)[0][0]
+        probability1 = model.predict_proba(input_data)[0][1]
+        probability2 = model.predict_proba(input_data)[0][2]
 
         # Display prediction results
         st.header("📈 Prediction Results (Ensemble Model)")
+        if prediction == 2:
+            st.error(f"⚠️ Patient is Diabetic (Probability: {model.predict_proba(input_data)[0][2]:.2%})")
+        if prediction == 0:
+            st.success(f"✅ Patient is  Non-Diabetic (Probability: {model.predict_proba(input_data)[0][0]:.2%})")
         if prediction == 1:
-            st.error(f"⚠️ Patient is at risk of diabetes (Probability: {probability:.2%})")
-        else:
-            st.success(f"✅ Patient is not at risk of diabetes (Probability: {probability:.2%})")
+            st.success(f"✅ Patient is Predict-Diabetic (Probability: {model.predict_proba(input_data)[0][1]:.2%})")
+
+        # Create a container for the download button
+        st.markdown('<div class="button-container">', unsafe_allow_html=True)
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            
+            # Title
+            pdf.cell(200, 10, txt="Diabetes Prediction Report", ln=True, align="C")
+            
+            # Prediction results
+            pdf.cell(200, 10, txt=f"Prediction: {'Diabetic' if prediction == 2 else 'Predict - Diabetic' if prediction == 1 else 'Non - Diabetic'}", ln=True)
+            pdf.cell(200, 10, txt=f"Probability: {probability0 if prediction == 0 else probability1 if prediction == 1 else probability2:.2%}", ln=True)
+            
+            # Add patient information
+            pdf.ln(10)
+            pdf.cell(200, 10, txt="Patient Information:", ln=True)
+            pdf.cell(200, 10, txt=f"Gender: {gender}", ln=True)
+            pdf.cell(200, 10, txt=f"Age: {age}", ln=True)
+            pdf.cell(200, 10, txt=f"Urea: {urea} mmol/L", ln=True)
+            pdf.cell(200, 10, txt=f"Creatinine: {cr} umol/L", ln=True)  # Changed μ to u
+            pdf.cell(200, 10, txt=f"HbA1c: {hba1c}%", ln=True)
+            pdf.cell(200, 10, txt=f"Total Cholesterol: {chol} mmol/L", ln=True)
+            pdf.cell(200, 10, txt=f"Triglycerides: {tg} mmol/L", ln=True)
+            pdf.cell(200, 10, txt=f"HDL Cholesterol: {hdl} mmol/L", ln=True)
+            pdf.cell(200, 10, txt=f"LDL Cholesterol: {ldl} mmol/L", ln=True)
+            pdf.cell(200, 10, txt=f"VLDL Cholesterol: {vldl} mmol/L", ln=True)
+            pdf.cell(200, 10, txt=f"BMI: {bmi} kg/m2", ln=True)  # Changed ² to 2
+
+            pdf_output = pdf.output(dest="S").encode("latin-1")
+            
+            # Use st.download_button instead of st.button
+            st.download_button(
+                label="📥 Download Report as PDF",
+                data=pdf_output,
+                file_name="diabetes_prediction_report.pdf",
+                mime="application/pdf"
+            )
+            st.success("✅ Report generated successfully!")
+        except Exception as e:
+            st.error(f"Error generating PDF report: {str(e)}")
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # Visualize results
         col1, col2 = st.columns(2)
 
         with col1:
             fig1, ax1 = plt.subplots()
-            ax1.bar(["No Risk", "At Risk"], [1 - probability, probability],
-                    color=["#4CAF50", "#f44336"])
+            ax1.bar(["Non-Diabetic", "Predict-Diabetic", "Diabetic"], [probability0, probability1,probability2],
+                    color=["#4CAF50","#FFEB3B", "#f44336"])
             ax1.set_ylim(0, 1)
             ax1.set_ylabel("Probability", fontsize=10)
             ax1.set_title("Diabetes Risk Prediction Probability", fontsize=12)
@@ -227,6 +294,37 @@ if st.button("Start Prediction", key="predict_button"):
 
     except Exception as e:
         st.error(f"Error during prediction: {str(e)}")
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Feedback Section
+st.markdown("---")
+st.header("💬 Support & Feedback")
+st.markdown("""
+    <div style='background-color: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;'>
+        <h4>Help & Support</h4>
+        <p>For help, please refer to the <a href="#">User Guide</a> or contact support@example.com.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Create a container for the feedback form
+st.markdown("""
+    <div style='background-color: #ffffff; padding: 1.5rem; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
+    """, unsafe_allow_html=True)
+
+feedback = st.text_area("Your Feedback", height=150, placeholder="Please share your thoughts about the system...")
+
+# Create a container for the submit button
+st.markdown('<div class="button-container">', unsafe_allow_html=True)
+if st.button("📤 Submit Feedback", key="feedback_button"):
+    try:
+        with open("feedback.txt", "a", encoding='utf-8') as f:
+            f.write(f"{feedback}\n{'='*50}\n")  # Add a separator between feedback entries
+        st.success("✅ Thank you for your feedback!")
+        st.experimental_rerun()  # Clear the form after submission
+    except Exception as e:
+        st.error(f"An error occurred while submitting feedback: {str(e)}")
+st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
