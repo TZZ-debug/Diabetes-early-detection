@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import os
+import base64
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
 
@@ -253,14 +254,14 @@ if st.button("🔍 Start Prediction", key="predict_button"):
             pdf.cell(200, 10, txt=f"Gender: {gender}", ln=True)
             pdf.cell(200, 10, txt=f"Age: {age}", ln=True)
             pdf.cell(200, 10, txt=f"Urea: {urea} mmol/L", ln=True)
-            pdf.cell(200, 10, txt=f"Creatinine: {cr} umol/L", ln=True)  # Changed μ to u
+            pdf.cell(200, 10, txt=f"Creatinine: {cr} umol/L", ln=True)
             pdf.cell(200, 10, txt=f"HbA1c: {hba1c}%", ln=True)
             pdf.cell(200, 10, txt=f"Total Cholesterol: {chol} mmol/L", ln=True)
             pdf.cell(200, 10, txt=f"Triglycerides: {tg} mmol/L", ln=True)
             pdf.cell(200, 10, txt=f"HDL Cholesterol: {hdl} mmol/L", ln=True)
             pdf.cell(200, 10, txt=f"LDL Cholesterol: {ldl} mmol/L", ln=True)
             pdf.cell(200, 10, txt=f"VLDL Cholesterol: {vldl} mmol/L", ln=True)
-            pdf.cell(200, 10, txt=f"BMI: {bmi} kg/m2", ln=True)  # Changed ² to 2
+            pdf.cell(200, 10, txt=f"BMI: {bmi} kg/m2", ln=True)
 
             pdf_output = pdf.output(dest="S").encode("latin-1")
 
@@ -337,12 +338,19 @@ st.markdown('</div>', unsafe_allow_html=True)
 # Feedback Section
 st.markdown("---")
 st.header("💬 Support & Feedback")
+def create_download_link(filename):
+    with open(filename, "rb") as file:
+        encoded = base64.b64encode(file.read()).decode()
+    href = f'<a href="data:application/octet - stream;base64,{encoded}" download="{filename}">{filename}</a>'
+    return href
+
+pdf_file = "User Guide.pdf"
 st.markdown("""
     <div style='background-color: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;'>
         <h4>Help & Support</h4>
-        <p>For help, please refer to the <a href="User Guide.pdf">User Guide</a> or contact support@example.com.</p>
+        <p>For help, please refer to the {} or contact support@example.com.</p>
     </div>
-    """, unsafe_allow_html=True)
+    """.format(create_download_link(pdf_file)), unsafe_allow_html=True)
 
 # Create a container for the feedback form
 st.markdown("""
@@ -368,6 +376,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("""
     <div style='text-align: center; color: #666;'>
-        <p>© 2024 Diabetes Early Detection System | Technical Support</p>
+        <p>© 2025 Diabetes Early Detection System | Technical Support</p>
     </div>
     """, unsafe_allow_html=True)
